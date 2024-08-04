@@ -1,12 +1,12 @@
 package client
 
 import (
-	"go_schedule_service/config"
+	"go_task_service/config"
 
 	"log"
 
-	gr "go_schedule_service/genproto/group_service"
-	st "go_schedule_service/genproto/student_service"
+	admin_service "go_task_service/genproto/admin_service"
+	user_service "go_task_service/genproto/user_service"
 
 	"fmt"
 
@@ -15,8 +15,8 @@ import (
 )
 
 type GrpcClientI interface {
-	Group() gr.GroupServiceClient
-	Student() st.StudentServiceClient
+	User() user_service.UserServiceClient
+	Admin() admin_service.AdminServiceClient
 }
 
 type GrpcClient struct {
@@ -38,25 +38,25 @@ func New(cfg config.Config) (*GrpcClient, error) {
 	return &GrpcClient{
 		cfg: cfg,
 		connections: map[string]interface{}{
-			"group_service":   gr.NewGroupServiceClient(connUser),
-			"student_service": st.NewStudentServiceClient(connUser),
+			"user_service":  user_service.NewUserServiceClient(connUser),
+			"admin_service": admin_service.NewAdminServiceClient(connUser),
 		},
 	}, nil
 }
 
-func (g *GrpcClient) Group() gr.GroupServiceClient {
-	client, ok := g.connections["group_service"].(gr.GroupServiceClient)
+func (g *GrpcClient) User() user_service.UserServiceClient {
+	client, ok := g.connections["user_service"].(user_service.UserServiceClient)
 	if !ok {
-		log.Println("failed to assert type for group_service")
+		log.Println("failed to assert type for user_service")
 		return nil
 	}
 	return client
 }
 
-func (g *GrpcClient) Student() st.StudentServiceClient {
-	client, ok := g.connections["student_service"].(st.StudentServiceClient)
+func (g *GrpcClient) Admin() admin_service.AdminServiceClient {
+	client, ok := g.connections["admin_service"].(admin_service.AdminServiceClient)
 	if !ok {
-		log.Println("failed to assert type for student_service")
+		log.Println("failed to assert type for admin_service")
 		return nil
 	}
 	return client

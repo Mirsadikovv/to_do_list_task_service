@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"go_schedule_service/config"
-	"go_schedule_service/grpc"
-	"go_schedule_service/grpc/client"
-	"go_schedule_service/storage/postgres"
+	"go_task_service/config"
+	"go_task_service/grpc"
+	"go_task_service/grpc/client"
+	"go_task_service/storage/postgres"
 	"net"
 
 	"github.com/saidamir98/udevs_pkg/logger"
