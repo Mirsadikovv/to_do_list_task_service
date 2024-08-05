@@ -34,7 +34,7 @@ func generateExternalId(db *pgxpool.Pool, ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	task_id := "A" + fmt.Sprintf("%05d", nextVal)
+	task_id := "T" + fmt.Sprintf("%05d", nextVal)
 	return task_id, nil
 }
 
@@ -167,12 +167,13 @@ func (c *taskRepo) Delete(ctx context.Context, id *task.TaskPrimaryKey) (emptypb
 func (c *taskRepo) GetList(ctx context.Context, req *task.GetListTaskRequest) (*task.GetListTaskResponse, error) {
 	tasks := task.GetListTaskResponse{}
 	var (
+		deadline   sql.NullString
 		created_at sql.NullString
 		updated_at sql.NullString
 	)
 
 	filter_by_date := ""
-
+	offset := (req.Offset - 1) * req.Limit
 	if req.FromDate != "" {
 		filter_by_date = fmt.Sprintln(` AND deadline BETWEEN '`, req.FromDate, `' AND '`, req.ToDate, `'`)
 	}
@@ -187,9 +188,9 @@ func (c *taskRepo) GetList(ctx context.Context, req *task.GetListTaskRequest) (*
 				created_at,
 				updated_at
 			FROM tasks 
-			WHERE TRUE AND deleted_at is null ` + filter_by_date + ` ORDER BY deadline`
+			WHERE user_id = $1 AND deleted_at is null ` + filter_by_date + ` ORDER BY deadline OFFSET $2 LIMIT $3`
 
-	rows, err := c.db.Query(ctx, query)
+	rows, err := c.db.Query(ctx, query, req.OwnerId, offset, req.Limit)
 
 	if err != nil {
 		log.Println("error while getting all tasks")
@@ -208,12 +209,13 @@ func (c *taskRepo) GetList(ctx context.Context, req *task.GetListTaskRequest) (*
 			&task.Title,
 			&task.TaskStatus,
 			&task.TaskDescription,
+			&deadline,
 			&created_at,
 			&updated_at,
 		); err != nil {
 			return &tasks, err
 		}
-
+		task.Deadline = pkg.NullStringToString(deadline)
 		tasks.Tasks = append(tasks.Tasks, &task)
 	}
 
@@ -273,7 +275,7 @@ func (c *taskRepo) ChangeStatus(ctx context.Context, req *task.TaskChangeStatus)
 
 	_, err := c.db.Exec(ctx, `
 		UPDATE tasks SET
-		status = $1,
+		task_status = $1,
 		updated_at = NOW()
 		WHERE external_id = $2 AND deleted_at IS NULL
 		`,
@@ -283,7 +285,7 @@ func (c *taskRepo) ChangeStatus(ctx context.Context, req *task.TaskChangeStatus)
 		log.Println("error while updating task status")
 		return nil, err
 	}
-	resp.Comment = "Password changed successfully"
+	resp.Comment = "status changed successfully"
 
 	return &resp, nil
 }
